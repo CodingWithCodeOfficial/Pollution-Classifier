@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Train Model - Pollution Detector</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'ml_app/css/style.css' %}">
+    <style>
+        .training-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .training-controls {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            max-width: 200px;
+        }
+        .progress-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .status-message {
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 6px;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .metric-card {
+            background: var(--bg-color);
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+        .epoch-history {
+            margin-top: 2rem;
+        }
+        .epoch-item {
+            padding: 0.75rem;
+            background: var(--bg-color);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .status-idle { color: var(--text-secondary); }
+        .status-running { color: var(--primary-color); }
+        .status-completed { color: var(--success-color); }
+        .status-error { color: var(--error-color); }
+        .final-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🌍 Pollution Detector</h1>
+            <ul class="nav-links">
+                <li><a href="{% url 'index' %}">Home</a></li>
+                <li><a href="{% url 'graphs' %}">Graphs & Visualizations</a></li>
+                <li><a href="{% url 'predict' %}">Predict</a></li>
+                <li><a href="{% url 'train' %}" class="active">Train</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="page-header">
+            <h2>Train Model</h2>
+            <p>Train the pollution detection model and watch progress in real-time</p>
+        </section>
+
+        <div class="training-container">
+            <div class="training-controls">
+                <h3>Training Configuration</h3>
+                <form id="trainingForm">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                        <!-- Training Hyperparameters -->
+                        <div>
+                            <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Training Hyperparameters</h4>
+                            <div class="form-group">
+                                <label for="epochs">Epochs:</label>
+                                <input type="number" id="epochs" name="epochs" value="50" min="1" max="200" title="Number of training epochs">
+                            </div>
+                            <div class="form-group">
+                                <label for="batch_size">Batch Size:</label>
+                                <input type="number" id="batch_size" name="batch_size" value="64" min="1" max="256" title="Number of samples per batch">
+                            </div>
+                            <div class="form-group">
+                                <label for="learning_rate">Learning Rate:</label>
+                                <input type="number" id="learning_rate" name="learning_rate" value="0.001" min="0.0001" max="1" step="0.0001" title="Learning rate for optimizer">
+                            </div>
+                            <div class="form-group">
+                                <label for="optimizer">Optimizer:</label>
+                                <select id="optimizer" name="optimizer" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1rem; max-width: 200px;">
+                                    <option value="adam">Adam</option>
+                                    <option value="sgd">SGD</option>
+                                    <option value="rmsprop">RMSprop</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Model Architecture -->
+                        <div>
+                            <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Model Architecture</h4>
+                            <div class="form-group">
+                                <label for="image_size">Image Size:</label>
+                                <select id="image_size" name="image_size" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1rem; max-width: 200px;">
+                                    <option value="96">96x96</option>
+                                    <option value="128">128x128</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="dropout_rate">Dropout Rate:</label>
+                                <input type="number" id="dropout_rate" name="dropout_rate" value="0.2" min="0" max="0.9" step="0.05" title="Dropout rate for regularization">
+                            </div>
+                        </div>
+
+                        <!-- Data Splitting -->
+                        <div>
+                            <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Data Splitting</h4>
+                            <div class="form-group">
+                                <label for="train_split">Train Split (%):</label>
+                                <input type="number" id="train_split" name="train_split" value="70" min="50" max="90" step="5" title="Percentage of data for training">
+                            </div>
+                            <div class="form-group">
+                                <label for="val_split">Validation Split (%):</label>
+                                <input type="number" id="val_split" name="val_split" value="15" min="5" max="30" step="5" title="Percentage of data for validation">
+                            </div>
+                            <div class="form-group">
+                                <label for="test_split">Test Split (%):</label>
+                                <input type="number" id="test_split" name="test_split" value="15" min="5" max="30" step="5" title="Percentage of data for testing" readonly style="background-color: #f5f5f5;">
+                            </div>
+                            <small style="color: var(--text-secondary); font-size: 0.85rem;">Test split is automatically calculated</small>
+                        </div>
+
+                        <!-- Callbacks & Data Collection -->
+                        <div>
+                            <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Callbacks & Data</h4>
+                            <div class="form-group">
+                                <label for="early_stopping_patience">Early Stopping Patience:</label>
+                                <input type="number" id="early_stopping_patience" name="early_stopping_patience" value="5" min="1" max="20" title="Number of epochs to wait before stopping if no improvement">
+                            </div>
+                            <div class="form-group">
+                                <label for="page_limit">STAC Page Limit:</label>
+                                <input type="number" id="page_limit" name="page_limit" value="100" min="10" max="500" step="10" title="Maximum number of STAC items to fetch">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 2rem; text-align: center;">
+                        <button type="submit" id="startBtn" class="btn btn-primary btn-large">
+                            Start Training
+                        </button>
+                        <button type="button" id="stopBtn" class="btn btn-secondary" style="display: none; margin-left: 1rem;" disabled>
+                            Stop Training (not implemented)
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="progress-container" id="progressContainer" style="display: none;">
+                <h3>Training Progress</h3>
+                <div class="status-message" id="statusMessage">Waiting to start...</div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="currentEpoch">0</div>
+                        <div class="metric-label">Current Epoch</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalEpochs">0</div>
+                        <div class="metric-label">Total Epochs</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="lossValue">-</div>
+                        <div class="metric-label">Loss</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="accuracyValue">-</div>
+                        <div class="metric-label">Accuracy</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="valLossValue">-</div>
+                        <div class="metric-label">Val Loss</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="valAccuracyValue">-</div>
+                        <div class="metric-label">Val Accuracy</div>
+                    </div>
+                </div>
+
+                <div class="epoch-history">
+                    <h4>Recent Epochs</h4>
+                    <div id="epochHistory">
+                        <div class="epoch-item">No epochs yet...</div>
+                    </div>
+                </div>
+
+                <!-- Final Training Stats -->
+                <div id="finalStatsSection" style="display: none;">
+                    <h4>Training Complete - Final Statistics</h4>
+                    <div class="final-stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Test Accuracy</div>
+                            <div class="stat-value" id="finalTestAcc">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Test Loss</div>
+                            <div class="stat-value" id="finalTestLoss">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Train Accuracy</div>
+                            <div class="stat-value" id="finalTrainAcc">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Train Loss</div>
+                            <div class="stat-value" id="finalTrainLoss">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Val Accuracy</div>
+                            <div class="stat-value" id="finalValAcc">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Val Loss</div>
+                            <div class="stat-value" id="finalValLoss">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Epochs Trained</div>
+                            <div class="stat-value" id="finalEpochs">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Pollution Detector. Built with Django & TensorFlow.</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'ml_app/js/train.js' %}"></script>
+</body>
+</html>
+

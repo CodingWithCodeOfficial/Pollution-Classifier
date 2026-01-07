@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollution Detector - Home</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'ml_app/css/style.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🌍 Pollution Detector</h1>
+            <ul class="nav-links">
+                <li><a href="{% url 'index' %}" class="active">Home</a></li>
+                <li><a href="{% url 'graphs' %}">Graphs & Visualizations</a></li>
+                <li><a href="{% url 'predict' %}">Predict</a></li>
+                <li><a href="{% url 'train' %}">Train</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Satellite Image Pollution Classification</h2>
+            <p class="subtitle">AI-powered detection of pollution and haze in satellite imagery using TensorFlow</p>
+        </section>
+
+        <div class="status-card">
+            <div class="status-item">
+                <span class="status-label">Model Status:</span>
+                <span class="status-value {% if model_loaded %}status-success{% else %}status-error{% endif %}">
+                    {% if model_loaded %}✓ Loaded{% else %}✗ Not Found{% endif %}
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Available Plots:</span>
+                <span class="status-value">{{ plot_count }}</span>
+            </div>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>View Graphs</h3>
+                <p>Explore training curves, confusion matrices, Grad-CAM visualizations, and more.</p>
+                <a href="{% url 'graphs' %}" class="btn btn-primary">View Graphs</a>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔮</div>
+                <h3>Make Predictions</h3>
+                <p>Upload satellite images to classify them as clear or pollution-like.</p>
+                <a href="{% url 'predict' %}" class="btn btn-primary">Try Prediction</a>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Train Model</h3>
+                <p>Train the pollution detection model with real-time epoch tracking and progress updates.</p>
+                <a href="{% url 'train' %}" class="btn btn-primary">Start Training</a>
+            </div>
+        </div>
+
+        {% if plot_files %}
+        <section class="recent-plots">
+            <h3>Available Visualizations</h3>
+            <div class="plot-list">
+                {% for plot in plot_files|slice:":6" %}
+                <div class="plot-item">
+                    <span class="plot-name">{{ plot }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <a href="{% url 'graphs' %}" class="btn btn-secondary">View All Graphs →</a>
+        </section>
+        {% endif %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Pollution Detector. Built with Django & TensorFlow.</p>
+        </div>
+    </footer>
+</body>
+</html>
+

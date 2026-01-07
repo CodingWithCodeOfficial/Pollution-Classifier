@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predict - Pollution Detector</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'ml_app/css/style.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🌍 Pollution Detector</h1>
+            <ul class="nav-links">
+                <li><a href="{% url 'index' %}">Home</a></li>
+                <li><a href="{% url 'graphs' %}">Graphs & Visualizations</a></li>
+                <li><a href="{% url 'predict' %}" class="active">Predict</a></li>
+                <li><a href="{% url 'train' %}">Train</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="page-header">
+            <h2>Image Prediction</h2>
+            <p>Upload a satellite image to classify it as clear or pollution-like</p>
+        </section>
+
+        {% if not model_loaded %}
+        <div class="alert alert-error">
+            <strong>⚠️ Model not found!</strong> Please ensure the model file (earthsearch_preview_haze_model.keras) exists in the project directory.
+        </div>
+        {% endif %}
+
+        <div class="predict-container">
+            <div class="upload-section">
+                <div class="upload-card">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📤</div>
+                        <p class="upload-text">Drag & drop an image here, or click to select</p>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('imageInput').click()">Choose File</button>
+                    </div>
+                    <div class="preview-container" id="previewContainer" style="display: none;">
+                        <img id="imagePreview" src="" alt="Preview" class="preview-image">
+                    </div>
+                </div>
+
+                <div class="predict-button-container">
+                    <button id="predictBtn" class="btn btn-primary btn-large" disabled>
+                        <span id="btnText">Predict</span>
+                        <span id="btnLoader" class="loader" style="display: none;"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h3>Prediction Results</h3>
+                
+                <div class="results-grid">
+                    <!-- Image Display -->
+                    <div class="result-image-container">
+                        <h4>Input Image</h4>
+                        <div class="image-display">
+                            <img id="resultImagePreview" src="" alt="Prediction input" class="result-image">
+                            <div class="image-overlay" id="imageOverlay">
+                                <span class="overlay-label" id="overlayLabel"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prediction Summary -->
+                    <div class="prediction-summary">
+                        <div class="prediction-badge" id="predictionBadge">
+                            <div class="badge-icon" id="badgeIcon">🌍</div>
+                            <div class="badge-content">
+                                <div class="badge-label">Prediction</div>
+                                <div class="badge-value" id="predictedClass"></div>
+                                <div class="badge-confidence">Confidence: <span id="confidenceValue"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Probability Chart -->
+                <div class="chart-container">
+                    <h4>Class Probabilities</h4>
+                    <div class="probability-chart" id="probabilityChart">
+                        <canvas id="probabilityCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Confidence Breakdown -->
+                <div class="confidence-breakdown">
+                    <h4>Confidence Breakdown</h4>
+                    <div class="prob-list" id="probList"></div>
+                </div>
+
+                <!-- Visual Comparison -->
+                <div class="comparison-container">
+                    <h4>Probability Comparison</h4>
+                    <div class="comparison-bars" id="comparisonBars"></div>
+                </div>
+
+                <!-- Model Visualization (Grad-CAM) -->
+                <div class="visualization-container" id="visualizationContainer" style="display: none;">
+                    <h4>Model Visualization - Grad-CAM</h4>
+                    <p class="visualization-description">
+                        See where the model focuses its attention when making predictions. 
+                        Red/yellow areas indicate regions the model considers most important.
+                    </p>
+                    <div class="visualization-grid" id="visualizationGrid">
+                        <!-- Grad-CAM images will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3>About Predictions</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Clear:</strong> Images with good visibility and minimal atmospheric interference
+                </div>
+                <div class="info-item">
+                    <strong>Pollution-like:</strong> Images showing haze, smog, or atmospheric pollution indicators
+                </div>
+            </div>
+            <p class="info-note">
+                <small>💡 Tip: For best results, use satellite images or aerial photographs. The model was trained on 96x96 pixel images from Earth Search STAC data.</small>
+            </p>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Pollution Detector. Built with Django & TensorFlow.</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'ml_app/js/predict.js' %}"></script>
+    <script>
+        // Redraw chart on window resize
+        window.addEventListener('resize', function() {
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection && resultsSection.style.display !== 'none') {
+                // Trigger a redraw if we have data
+                const canvas = document.getElementById('probabilityCanvas');
+                if (canvas && canvas.dataset.hasData) {
+                    // Chart will be redrawn when needed
+                    setTimeout(() => {
+                        if (window.lastPredictionData) {
+                            const predictScript = document.querySelector('script[src*="predict.js"]');
+                            if (predictScript) {
+                                // Just redraw the chart
+                                const ctx = canvas.getContext('2d');
+                                const event = new Event('redrawChart');
+                                window.dispatchEvent(event);
+                            }
+                        }
+                    }, 100);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
